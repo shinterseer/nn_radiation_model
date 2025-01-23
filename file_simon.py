@@ -10,13 +10,10 @@ from keras.layers import Dense, Input, Dropout
 from tensorflow.keras.metrics import RootMeanSquaredError
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.keras.models import load_model
+from sklearn.metrics import r2_score
 
 import feature_engineering as fen
 
-
-# tried to suppress tensorflow warnings being printed to the console - but that did not work
-# import os
-# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 def preprocess(locations=['Vienna'], save_to=None, date_limits=None):
     base_path = r'./Data/Mit HSX'
@@ -71,50 +68,6 @@ def preprocess(locations=['Vienna'], save_to=None, date_limits=None):
     return df
 
 
-def train_model(X, y,
-                learning_rate=0.001, batch_size=32, epochs=10, activation='sigmoid', test_size=0.3,
-                show_lossplot=True, save_as='trained_model.keras'):
-    # scaler_x = MinMaxScaler()
-    # x_scaled = scaler_x.fit_transform(X)
-    # X_train, x_val, y_train, y_val = train_test_split(x_scaled, y, test_size=test_size, random_state=42)
-    X_train, x_val, y_train, y_val = train_test_split(X, y, test_size=test_size, random_state=42)
-
-    model = Sequential()
-
-    model.add(Input(shape=(X_train.shape[1],)))
-
-    model.add(Dense(64, activation))
-    model.add(Dropout(0.3))
-
-    model.add(Dense(32, activation))
-    model.add(Dropout(0.3))
-
-    model.add(Dense(16, activation))
-    model.add(Dropout(0.3))
-
-    model.add(Dense(1))
-
-    model.compile(optimizer=Nadam(learning_rate), loss="mse", metrics=[RootMeanSquaredError()])
-
-    model_checkpoint = ModelCheckpoint(save_as, save_best_only=True, monitor='val_loss')
-    early_stopping = EarlyStopping(monitor='val_loss', patience=80, restore_best_weights=True)
-
-    history = model.fit(X_train, y_train, batch_size, epochs, validation_data=(x_val, y_val),
-                        callbacks=[model_checkpoint, early_stopping])
-
-    model.save(save_as)
-    print(f"model saved as {save_as}")
-
-    if show_lossplot:
-        plt.plot(history.history['loss'], label='Train Loss')
-        plt.plot(history.history['val_loss'], label='Validation Loss')
-        plt.xlabel('Epochs')
-        plt.ylabel('Loss')
-        plt.legend()
-        plt.title('Loss During Training')
-        plt.show()
-
-
 def preprocessing_script(locations=tuple(['Vienna']), save_as='preprocessed_data.csv', date_limits=None):
     # print(f'locations to process: {locations}')
     time_start = time.time()
@@ -128,37 +81,50 @@ def preprocessing_script(locations=tuple(['Vienna']), save_as='preprocessed_data
     print(f'{time.time() - time_start:.2f} sec')
 
 
-def training_script(df, target='HSX', save_preproc_as=None, preproc=False, training=True, use_preproc_file=None, date_limit_low=None,
-                    list_of_features=None):
+def training_script(df, target='HSX',
+                    list_of_features=None,
+                    learning_rate=0.001, batch_size=32, epochs=10, test_size=0.3,
+                    show_lossplot=True, save_as='trained_model.keras',
+                    list_of_layers=None):
     time_start = time.time()
     print(f'training model... ', end='', flush=True)
     if list_of_features is None:
         list_of_features = df.columns.pop(target)
-        # list_of_features = ["TL", "RF", "RR", "RRM", "CI", "GSX", "FF", "DD", "P", "Tag", "Monat", "Jahr", "Stunde",
-        #                     "Altitude", "Longitude", "Elevation", "TOA"]
+    # scaler_x = MinMaxScaler()
+    # x_scaled = scaler_x.fit_transform(X)
+    # X_train, x_val, y_train, y_val = train_test_split(x_scaled, y, test_size=test_size, random_state=42)
 
-    train_model(X=df[list_of_features], y=df['HSX'], activation='relu')
+    X = df[list_of_features]
+    y = df['HSX']
+    X_train, x_val, y_train, y_val = train_test_split(X, y, test_size=test_size, random_state=42)
+
+    model = Sequential()
+    model.add(Input(shape=(X_train.shape[1],)))
+    for layer in list_of_layers:
+        model.add(layer)
+    model.add(Dense(1))
+    model.compile(optimizer=Nadam(learning_rate), loss="mse", metrics=[RootMeanSquaredError()])
+
+    model_checkpoint = ModelCheckpoint(save_as, save_best_only=True, monitor='val_loss')
+    early_stopping = EarlyStopping(monitor='val_loss', patience=80, restore_best_weights=True)
+
+    history = model.fit(X_train, y_train, batch_size, epochs, validation_data=(x_val, y_val),
+                        callbacks=[model_checkpoint, early_stopping])
+    model.save(save_as)
+    print(f"model saved as {save_as}")
     print(f'{time.time() - time_start:.2f} sec')
 
-
-def evaluation_script(model_file, list_of_features):
-    model = load_model(model_file)
-    predictions = model.predict(X)
-
-
-def plottyplot():
-    df = pd.read_csv('processed_vienna.csv', index_col=0)
-    df.index = pd.to_datetime(df.index)
-    df = df[df.index >= '2016']
-    # df.fillna(method='ffill', inplace=True)
-    # df.fillna(value=-100, inplace=True)
-    plt.plot(df['HSX'])
-    plt.grid()
-    plt.show(block=True)
+    if show_lossplot:
+        plt.plot(history.history['loss'], label='Train Loss')
+        plt.plot(history.history['val_loss'], label='Validation Loss')
+        plt.xlabel('Epochs')
+        plt.ylabel('Loss')
+        plt.legend()
+        plt.title('Loss During Training')
+        plt.show()
 
 
 def main_script():
-    # plottyplot()
     training_data_file = 'processed_vienna_2016.csv'
     training_period = ('2016', '2023')
     evaluation_data_file = 'processed_vienna_2024.csv'
@@ -177,7 +143,10 @@ def main_script():
 
     list_of_features = ["TL", "RF", "RR", "RRM", "CI", "GSX", "FF", "DD", "P", "Tag", "Monat", "Jahr", "Stunde",
                         "Altitude", "Longitude", "Elevation", "TOA"]
-    # training_script(df_train, list_of_features=list_of_features, target=target, save_as=model_file)
+    list_of_layers = [Dense(64, 'relu'),
+                      Dense(32, 'relu'),
+                      Dense(16, 'relu')]
+    training_script(df_train, list_of_features=list_of_features, target=target, list_of_layers=list_of_layers, save_as=model_file)
 
     time_start = time.time()
     print(f'opening {evaluation_data_file}... ', end='', flush=True)
@@ -188,13 +157,12 @@ def main_script():
     model = load_model(model_file)
     predictions = model.predict(X_new)
     df_eval['predictions'] = predictions
+    print(f'coef of determination: {r2_score(df_eval["predictions"], df_eval[target]):.3f}')
     plt.plot(df_eval['predictions'], label='predictions')
     plt.plot(df_eval[target], label='measurements')
     plt.grid()
     plt.legend()
-    plt.show()
-
-    # evaluation_script(model_file=model_file, X_new, target=target, list_of_features=list_of_features)
+    plt.show(block=True)
 
 
 if __name__ == '__main__':
