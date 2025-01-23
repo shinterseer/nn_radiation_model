@@ -16,7 +16,7 @@ import tensorflow as tf
 
 def train_model(outpath="variabler Name", learning_rate=0.0001, batch_size=64, epochs=10, activation="sigmoid", test_size=0.3, vienna=True, innsbruck=True, graz=True, klagenfurt=True, sonnblick=True,
                 tl=True, rf=True, rr=True, rrm=True, ci=True, gsx=True, ff=True, toa=True, dd=True, p=True, tag=True, monat=True, jahr=True, stunde=True, alt=True, long=True, elevation=True,
-                hsx=False, target="HSX", show_lossplot=True):
+                hsx=False, target="HSX", show_lossplot=True, save_preproc_as=None):
     if outpath == "variabler Name":
         outpath = os.path.abspath(f"./hsx_{learning_rate}_{activation}_{batch_size}_{epochs}.keras")
     else:
@@ -208,6 +208,9 @@ def train_model(outpath="variabler Name", learning_rate=0.0001, batch_size=64, e
     pd.set_option('display.max_rows', None)
     print(df.head(144))
 
+    if save_preproc_as is not None:
+        df.to_csv(save_preproc_as)
+
     def evaluate_model(model, x_val, y_val):
         y_pred = model.predict(x_val, verbose=0).flatten()
         rmse = np.sqrt(mean_squared_error(y_val, y_pred))
@@ -337,7 +340,7 @@ def main_script():
     hsx = False
 
     train_model(outpath, learning_rate, batch_size, epochs, activation, test_size, vienna, innsbruck, graz, klagenfurt, sonnblick, tl, rf, rr, gsx, rrm, ci, ff, dd, p, tag, monat, jahr, stunde, alt,
-                long, elevation, toa, hsx, target, show_lossplot)
+                long, elevation, toa, hsx, target, show_lossplot, save_preproc_as='noah_preproc.csv')
 
 
 if __name__ == '__main__':
