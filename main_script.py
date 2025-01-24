@@ -68,17 +68,18 @@ def preprocess(locations=['Vienna'], save_to=None, date_limits=None):
     return df
 
 
-def preprocessing_script(locations=tuple(['Vienna']), save_as='preprocessed_data.csv', date_limits=None):
+def preprocessing_script(locations=tuple(['Vienna']), save_as=None, date_limits=None):
     # print(f'locations to process: {locations}')
     time_start = time.time()
     print('preprocessing... ', end='', flush=True)
     df = preprocess(locations=locations, date_limits=date_limits)
     print(f'{time.time() - time_start:.2f} sec')
 
-    time_start = time.time()
-    print(f'writing to file {save_as}... ', end='', flush=True)
-    df.to_csv(save_as)
-    print(f'{time.time() - time_start:.2f} sec')
+    if save_as is not None:
+        time_start = time.time()
+        print(f'writing to file {save_as}... ', end='', flush=True)
+        df.to_csv(save_as)
+        print(f'{time.time() - time_start:.2f} sec')
 
 
 def training_script(df, target='HSX',
@@ -95,7 +96,7 @@ def training_script(df, target='HSX',
     # X_train, x_val, y_train, y_val = train_test_split(x_scaled, y, test_size=test_size, random_state=42)
 
     X = df[list_of_features]
-    y = df['HSX']
+    y = df[target]
     X_train, x_val, y_train, y_val = train_test_split(X, y, test_size=test_size, random_state=42)
 
     model = Sequential()
@@ -132,7 +133,8 @@ def main_script():
 
     model_file = 'trained_model.keras'
     target = 'HSX'
-    # preprocessing_script(save_as=training_data_file, date_limits=training_period)
+    list_of_locations = ['Vienna']
+    preprocessing_script(locations=list_of_locations, save_as=training_data_file, date_limits=training_period)
     # preprocessing_script(save_as=evaluation_data_file, date_limits=evaluation_period)
 
     time_start = time.time()
@@ -146,7 +148,8 @@ def main_script():
     list_of_layers = [Dense(64, 'relu'),
                       Dense(32, 'relu'),
                       Dense(16, 'relu')]
-    training_script(df_train, list_of_features=list_of_features, target=target, list_of_layers=list_of_layers, save_as=model_file)
+    training_script(df=df_train, list_of_features=list_of_features, list_of_layers=list_of_layers, target=target,
+                    save_as=model_file, epochs=3)
 
     time_start = time.time()
     print(f'opening {evaluation_data_file}... ', end='', flush=True)
