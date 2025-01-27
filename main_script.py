@@ -15,7 +15,7 @@ from sklearn.metrics import r2_score
 import feature_engineering as fen
 
 
-def preprocess(locations=['Vienna'], save_to=None, date_limits=None):
+def preprocess(locations=['Vienna', 'Sonnblick', 'Klagenfurt', 'Graz', 'Innsbruck'], save_to=None, date_limits=None):
     base_path = r'./Data/Mit HSX'
     training_data_paths = {
         'Vienna': f'{base_path}/HS__W-5904-WIEN-HOHE_WARTE_10min.csv',
@@ -62,13 +62,14 @@ def preprocess(locations=['Vienna'], save_to=None, date_limits=None):
         df['Elevation'] = df.apply(fen.fc_alpha_sol_wrap, axis=1)
         df['TOA'] = df.apply(fen.top_of_atmosphere_radiation, axis=1)
         df['CI'] = df.apply(fen.clearness_index, axis=1)
+        df["Azimuth"] = df.apply(fen.calculate_sun_azimuth,axis=1)
         training_set.append(df)
 
     df = pd.concat(training_set)
     return df
 
 
-def preprocessing_script(locations=tuple(['Vienna']), save_as=None, date_limits=None):
+def preprocessing_script(locations=tuple(['Vienna', 'Sonnblick', 'Klagenfurt', 'Graz', 'Innsbruck']), save_as=None, date_limits=None):
     # print(f'locations to process: {locations}')
     time_start = time.time()
     print('preprocessing... ', end='', flush=True)
@@ -84,7 +85,7 @@ def preprocessing_script(locations=tuple(['Vienna']), save_as=None, date_limits=
 
 def training_script(df, target='HSX',
                     list_of_features=None,
-                    learning_rate=0.001, batch_size=32, epochs=10, test_size=0.3,
+                    learning_rate=0.001, batch_size=64, epochs=1000, test_size=0.3,
                     show_lossplot=True, save_as='trained_model.keras',
                     list_of_layers=None):
     time_start = time.time()
@@ -127,13 +128,13 @@ def training_script(df, target='HSX',
 
 def main_script():
     training_data_file = 'processed_vienna_2016.csv'
-    training_period = ('2016', '2023')
+    training_period = ('2003', '2023')
     evaluation_data_file = 'processed_vienna_2024.csv'
     evaluation_period = ('2023', '2024')
 
     model_file = 'trained_model.keras'
     target = 'HSX'
-    list_of_locations = ['Vienna']
+    list_of_locations = ['Vienna', 'Sonnblick', 'Klagenfurt', 'Graz', 'Innsbruck']
     preprocessing_script(locations=list_of_locations, save_as=training_data_file, date_limits=training_period)
     # preprocessing_script(save_as=evaluation_data_file, date_limits=evaluation_period)
 
@@ -144,7 +145,7 @@ def main_script():
     print(f'{time.time() - time_start:.2f} sec')
 
     list_of_features = ["TL", "RF", "RR", "RRM", "CI", "GSX", "FF", "DD", "P", "Tag", "Monat", "Jahr", "Stunde",
-                        "Altitude", "Longitude", "Elevation", "TOA"]
+                        "Altitude", "Longitude", "Elevation", "Azimuth", "TOA"]
     list_of_layers = [Dense(64, 'relu'),
                       Dense(32, 'relu'),
                       Dense(16, 'relu')]

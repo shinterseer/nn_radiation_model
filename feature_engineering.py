@@ -108,3 +108,44 @@ def clearness_index(row):
         return gsx / toa
     else:
         return 0
+
+
+def calculate_sun_azimuth(row):
+    leap_years = [2004, 2008, 2012, 2016, 2020]
+    day = row['day_of_year']
+    hour = row['Stunde'] + row['Minute'] / 60  + 0.5
+    TZ = 1
+    lambda_w = row['Longitude']
+    phi_w = row['Latitude']
+    alpha_sol = row["Elevation"]
+    year = row.name.year
+    leap_year = year in leap_years
+    
+    delta = fc_delta(day, leap_year)
+    t_eq = fc_t_eq(day)
+    t_shift = fc_t_shift(TZ, lambda_w)
+    t_sol = fc_t_sol(t_eq, t_shift, hour)
+    omega = fc_omega(t_sol)
+    
+    # Berechnung der Hilfsvariablen gemäß den Gleichungen (13) bis (15) in DIN EN ISO 52010-1
+    sin_phi_sol_aux1 = np.cos(np.radians(delta)) * np.sin(np.radians(180 - omega))/(np.cos(np.arcsin(np.sin(np.radians(alpha_sol)))))
+    
+    cos_phi_sol_aux1 = (np.cos(np.radians(phi_w)) * np.sin(np.radians(delta)) + np.sin(np.radians(phi_w)) * np.cos(np.radians(delta)) * np.cos(np.radians(180 - omega)))/(np.cos(np.arcsin(np.sin(np.radians(alpha_sol)))))
+    
+    phi_sol_aux2 = np.degrees(np.arcsin(np.cos(np.radians(delta)) * np.sin(np.radians(180 - omega))))/((np.cos(np.arcsin(np.sin(np.radians(alpha_sol))))))
+
+    # Berechnung des Sonnenazimutwinkels gemäß Gleichung (16) in DIN EN ISO 52010-1
+    if sin_phi_sol_aux1 >= 0 and cos_phi_sol_aux1 > 0:
+        phi_sol = 180 - phi_sol_aux2
+    elif cos_phi_sol_aux1 < 0:
+        phi_sol = phi_sol_aux2
+    else:
+        phi_sol = - (180 + phi_sol_aux2)
+        
+    # if phi_sol <= 0:
+    #     phi_sol = 180 - phi_sol
+    # else:
+    #     phi_sol = (180 - phi_sol)
+
+    phi_sol = 180 - phi_sol   
+    return phi_sol
