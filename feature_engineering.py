@@ -149,3 +149,10 @@ def calculate_sun_azimuth(row):
 
     phi_sol = 180 - phi_sol   
     return phi_sol
+
+
+def calculate_time_distance(row):
+    time_in_hours = row['Stunde'] + row['Minute'] / 60
+    time_distance = (time_in_hours - 12) / 24  
+    return time_distance
+

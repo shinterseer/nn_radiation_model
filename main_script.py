@@ -61,6 +61,7 @@ def preprocess(locations=['Vienna', 'Sonnblick', 'Klagenfurt', 'Graz', 'Innsbruc
         #  this takes forever - so lets skip it for now
         df['Elevation'] = df.apply(fen.fc_alpha_sol_wrap, axis=1)
         df['TOA'] = df.apply(fen.top_of_atmosphere_radiation, axis=1)
+        df['time_distance'] = df.apply(fen.calculate_time_distance, axis=1)
         df['CI'] = df.apply(fen.clearness_index, axis=1)
         df["Azimuth"] = df.apply(fen.calculate_sun_azimuth,axis=1)
         training_set.append(df)
@@ -136,7 +137,7 @@ def main_script():
     target = 'HSX'
     list_of_locations = ['Vienna', 'Sonnblick', 'Klagenfurt', 'Graz', 'Innsbruck']
     preprocessing_script(locations=list_of_locations, save_as=training_data_file, date_limits=training_period)
-    # preprocessing_script(save_as=evaluation_data_file, date_limits=evaluation_period)
+    #preprocessing_script(save_as=evaluation_data_file, date_limits=evaluation_period)
 
     time_start = time.time()
     print(f'opening {training_data_file}... ', end='', flush=True)
