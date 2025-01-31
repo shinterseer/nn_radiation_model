@@ -61,6 +61,7 @@ def get_day_of_year(row):
     return date.timetuple().tm_yday
 
 
+# Sonnenhöhe/Elevation nach DIN EN ISO 52010-1
 def fc_alpha_sol_wrap(row):
     leap_years = [2004, 2008, 2012, 2016, 2020]
 
@@ -86,7 +87,7 @@ def fc_alpha_sol_wrap(row):
 
     return alpha_sol
 
-
+#Berechnung nach https://doi.org/10.1140/epjp/s13360-024-05555-8
 def top_of_atmosphere_radiation(row):
     n_day = row['day_of_year']
     elevation = row['Elevation']
@@ -100,7 +101,7 @@ def top_of_atmosphere_radiation(row):
 
     return toa
 
-
+#Berechnung nach https://doi.org/10.1140/epjp/s13360-024-05555-8
 def clearness_index(row):
     gsx = float(row['GSX'])
     toa = float(row['TOA'])
@@ -109,7 +110,7 @@ def clearness_index(row):
     else:
         return 0
 
-
+# Azimuth nach DIN EN ISO 52010-1
 def calculate_sun_azimuth(row):
     leap_years = [2004, 2008, 2012, 2016, 2020]
     day = row['day_of_year']
@@ -155,4 +156,14 @@ def calculate_time_distance(row):
     time_in_hours = row['Stunde'] + row['Minute'] / 60
     time_distance = (time_in_hours - 12) / 24  
     return time_distance
+
+
+def calculate_gsx_3h_mean(df, intervall=18):
+
+    df['group'] = np.floor(np.arange(len(df)) / intervall)
+    df['GSX_3h_mean'] = df.groupby('group')['GSX'].transform('mean')
+    df.drop(columns=['group'], inplace=True)
+
+    return df
+
 

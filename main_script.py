@@ -62,6 +62,7 @@ def preprocess(locations=['Vienna', 'Sonnblick', 'Klagenfurt', 'Graz', 'Innsbruc
         df['Elevation'] = df.apply(fen.fc_alpha_sol_wrap, axis=1)
         df['TOA'] = df.apply(fen.top_of_atmosphere_radiation, axis=1)
         df['time_distance'] = df.apply(fen.calculate_time_distance, axis=1)
+        df = fen.calculate_gsx_3h_mean(df)
         df['CI'] = df.apply(fen.clearness_index, axis=1)
         df["Azimuth"] = df.apply(fen.calculate_sun_azimuth,axis=1)
         training_set.append(df)
@@ -144,9 +145,9 @@ def main_script():
     df_train = pd.read_csv(training_data_file, index_col=0)
     # df_train.index = pd.to_datetime(df_train.index)
     print(f'{time.time() - time_start:.2f} sec')
-
-    list_of_features = ["TL", "RF", "RR", "RRM", "CI", "GSX", "FF", "DD", "P", "Tag", "Monat", "Jahr", "Stunde",
-                        "Altitude", "Longitude", "Elevation", "Azimuth", "TOA"]
+    print(df)
+    list_of_features = ["TL", "RF", "RR", "RRM", "CI", "GSX", "FF", "DD", "P", "Tag", "Monat", "Jahr", "time_distance",
+                        "Altitude", "Longitude", "Elevation", "Azimuth", "TOA", 'GSX_3h_mean']
     list_of_layers = [Dense(64, 'relu'),
                       Dense(32, 'relu'),
                       Dense(16, 'relu')]
