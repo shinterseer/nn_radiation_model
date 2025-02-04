@@ -67,16 +67,18 @@ def preprocess(locations=['Vienna', 'Sonnblick', 'Klagenfurt', 'Graz', 'Innsbruc
         df["Azimuth"] = df.apply(fen.calculate_sun_azimuth,axis=1)
         training_set.append(df)
 
+    df = df.dropna()
     df = pd.concat(training_set)
     return df
 
 
 def preprocessing_script(locations=tuple(['Vienna', 'Sonnblick', 'Klagenfurt', 'Graz', 'Innsbruck']), save_as=None, date_limits=None):
-    # print(f'locations to process: {locations}')
+    print(f'locations to process: {locations} to {save_as}')
     time_start = time.time()
     print('preprocessing... ', end='', flush=True)
     df = preprocess(locations=locations, date_limits=date_limits)
     print(f'{time.time() - time_start:.2f} sec')
+    df = df.dropna()
 
     if save_as is not None:
         time_start = time.time()
@@ -87,13 +89,14 @@ def preprocessing_script(locations=tuple(['Vienna', 'Sonnblick', 'Klagenfurt', '
 
 def training_script(df, target='HSX',
                     list_of_features=None,
-                    learning_rate=0.001, batch_size=64, epochs=1000, test_size=0.3,
+                    learning_rate=0.001, batch_size=64, epochs=10, test_size=0.3,
                     show_lossplot=True, save_as='trained_model.keras',
                     list_of_layers=None):
     time_start = time.time()
     print(f'training model... ', end='', flush=True)
     if list_of_features is None:
-        list_of_features = df.columns.pop(target)
+        list_of_features = [col for col in df.columns if col != target]
+
     # scaler_x = MinMaxScaler()
     # x_scaled = scaler_x.fit_transform(X)
     # X_train, x_val, y_train, y_val = train_test_split(x_scaled, y, test_size=test_size, random_state=42)
@@ -129,30 +132,30 @@ def training_script(df, target='HSX',
 
 
 def main_script():
-    training_data_file = 'processed_vienna_2016.csv'
-    training_period = ('2003', '2023')
+    training_data_file = 'preprocessed_loc_without_vienna.csv'
+    training_period = ('2003', '2024')
     evaluation_data_file = 'processed_vienna_2024.csv'
-    evaluation_period = ('2023', '2024')
+    evaluation_period = ('2003', '2024')
 
     model_file = 'trained_model.keras'
     target = 'HSX'
-    list_of_locations = ['Vienna', 'Sonnblick', 'Klagenfurt', 'Graz', 'Innsbruck']
-    preprocessing_script(locations=list_of_locations, save_as=training_data_file, date_limits=training_period)
-    #preprocessing_script(save_as=evaluation_data_file, date_limits=evaluation_period)
+    list_of_locations = ['Sonnblick', 'Klagenfurt', 'Graz', 'Innsbruck']
+    preprocessing_script(locations=list_of_locations, save_as=training_data_file)
+    preprocessing_script(locations=['Vienna'], save_as=evaluation_data_file)
 
     time_start = time.time()
     print(f'opening {training_data_file}... ', end='', flush=True)
     df_train = pd.read_csv(training_data_file, index_col=0)
     # df_train.index = pd.to_datetime(df_train.index)
     print(f'{time.time() - time_start:.2f} sec')
-    print(df)
+   
     list_of_features = ["TL", "RF", "RR", "RRM", "CI", "GSX", "FF", "DD", "P", "Tag", "Monat", "Jahr", "time_distance",
                         "Altitude", "Longitude", "Elevation", "Azimuth", "TOA", 'GSX_3h_mean']
     list_of_layers = [Dense(64, 'relu'),
                       Dense(32, 'relu'),
                       Dense(16, 'relu')]
     training_script(df=df_train, list_of_features=list_of_features, list_of_layers=list_of_layers, target=target,
-                    save_as=model_file, epochs=3)
+                    save_as=model_file, epochs=15)
 
     time_start = time.time()
     print(f'opening {evaluation_data_file}... ', end='', flush=True)
